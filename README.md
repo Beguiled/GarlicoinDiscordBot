@@ -9,6 +9,7 @@ You will also need to visit the [Discord App Portal](https://discordapp.com/deve
 
 ## Configuration
 A configuration file `config.json` is included with the package. Use the following guide to determine how you should populate it:
+
 |Key|Description|
 |-|-|
 |token|The Discord App token you generate at the Discord App Portal|
@@ -27,6 +28,7 @@ I prefer to use the `NPM` package `Forever` to keep the bot running at all times
 
 ## Bot Admin Commands
 The bot aslo has some commands limited to Admin-level users (defined in `config.json` under the `bot_admin_roles` definition) only. When you use any of these commands the bot will delete your request statement. The commands are defined as follows:
+
 |Command|Result|
 |-|-|
 |echo|This will cause the bot to repeat what you've stated after the command. For example `!echo Hello!` will cause the bot to send `Hello!` to the channel.|
