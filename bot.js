@@ -49,7 +49,7 @@ discordClient.on("ready", () => {
 
     // Populate the botAdminRoles array
     consoleLog(`Setting admin roles to ${config.bot_admin_roles}`);
-    botAdminRoles = config.bot_admin_roles.split(" ");
+    botAdminRoles = config.bot_admin_roles.split(",");
 
     // Poll the pool's API for the stats JSON data, then update the poolBlockData array
     consoleLog(`Getting initial pool API data`);
