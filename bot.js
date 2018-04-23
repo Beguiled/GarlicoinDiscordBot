@@ -18,7 +18,6 @@ let discordClient = new Discord.Client();
 let http = require('http');
 let https = require('https');
 let fs = require('fs');
-let util = require('util');
 
 // JSON data storage objects
 let config = require("./config.json");
@@ -419,11 +418,6 @@ discordClient.on("message", message => {
 
 // Helpers
 //////////
-
-// A simple object inspector useful for debugging purposes
-function inspect(obj) {
-    consoleLog('\n' + util.inspect(obj, false, null));
-}
 
 // Write out to the console (and log file)
 function consoleLog(text) {
