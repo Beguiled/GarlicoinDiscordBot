@@ -3,7 +3,7 @@
     "name" : "BotNameHere",
     "server_name" : "",
     "pool_codebase": "nomp",
-    "pool_api" : "",
+    "pool_api_url" : "",
     "prefix" : "!",
     "bot_admin_roles" : ""
 }
