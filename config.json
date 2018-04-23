@@ -1,0 +1,9 @@
+{
+    "token" : "NDThisIsNotAReal.Token.GetYoursAtDiscordAppPortal",
+    "name" : "BotNameHere",
+    "server_name" : "",
+    "pool_codebase": "nomp",
+    "pool_api" : "",
+    "prefix" : "!",
+    "bot_admin_roles" : ""
+}
