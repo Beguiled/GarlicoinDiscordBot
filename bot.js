@@ -1,6 +1,7 @@
 //
 // Garlicoin Discord Bot
-// A bot written for NodeJS to compliment a Garlicoin cryptocurrency Discord server  
+// A bot written for NodeJS to compliment a Garlicoin cryptocurrency Discord server
+// https://github.com/Beguiled/GarlicoinDiscordBot
 //
 // Created by Jason Egan (beguil3d#2285)
 // Version 1.0
@@ -38,6 +39,7 @@ let logFile = './logs/' + startup.toISOString().replace(/T|Z|-|:/gi, '').substr(
 
 // Announce start up
 consoleLog(`Garlicoin Discord Bot version ${BOT_VERSION} starting up...`);
+consoleLog('Visit https://github.com/Beguiled/GarlicoinDiscordBot for help and updates');
 
 // Discord Client "ready" event
 discordClient.on("ready", () => {
@@ -497,7 +499,7 @@ function getCoinData(coin) {
 // Query the pool's API for stats data
 function getJsonStats() {
     return new Promise(function (resolve, reject) {
-        let url = `${config.pool_api}/stats`;
+        let url = `${config.pool_api_url}/stats`;
         http.get(url, (res) => {
             let data = '';
 
@@ -528,7 +530,7 @@ function getVelocity() {
     // NOMP codebase
     if (config.pool_codebase.toLowerCase() === 'nomp') {
         return new Promise(function (resolve, reject) {
-            let url = `${config.pool_api}/pool_stats`;
+            let url = `${config.pool_api_url}/pool_stats`;
             http.get(url, (res) => {
                 let data = '';
 
