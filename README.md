@@ -23,7 +23,7 @@ A configuration file `config.json` is included with the package. Use the followi
 ## Execution
 Use `node bot.js` within the deployment directory to start the bot. If all is configured correctly you should see it join your server. You can then go about managing roles. 
 
-I prefer to use the `NPM` package `Forever` to keep the bot running at all times. However, you can handle it however you prefer.
+I prefer to use the `NPM` package [Forever](https://www.npmjs.com/package/forever) to keep the bot running at all times. However, you can handle it however you prefer.
 
 
 ## Bot Admin Commands
