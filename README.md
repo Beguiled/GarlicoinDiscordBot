@@ -18,7 +18,7 @@ A configuration file `config.json` is included with the package. Use the followi
 |pool_codebase|The codebase your Garlicoin Pool is running on. Currently only `NOMP` is supported.|
 |pool_api_url|The URL to your pool's API|
 |prefix|Define the prefix you would prefer for bot commands (Default is `!`)|
-|bot_admin_roles|Any roles (separated by spaces) you would like to have access to Bot Admin Commands|
+|bot_admin_roles|Any roles, separated by commas (`,`), you would like to have access to Bot Admin Commands|
 
 ## Execution
 Use `node bot.js` within the deployment directory to start the bot. If all is configured correctly you should see it join your server. You can then go about managing roles. 
