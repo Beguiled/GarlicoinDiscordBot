@@ -15,7 +15,7 @@ A configuration file `config.json` is included with the package. Use the followi
 |token|The Discord App token you generate at the Discord App Portal|
 |name|The name your bot will take when it connects|
 |server_name|The name of your Garlicoin Pool server - this is presented to new members when they are greeted by the bot|
-|pool_codebase|The codebase your Garlicoin Pool is running on. Currently only `NOMP` is supported.|
+|pool_codebase|The codebase your Garlicoin Pool is running on. (Currently only `NOMP` is supported.)|
 |pool_api_url|The URL to your pool's API|
 |prefix|Define the prefix you would prefer for bot commands (Default is `!`)|
 |bot_admin_roles|Any roles, separated by commas (`,`), you would like to have access to Bot Admin Commands|
