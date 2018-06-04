@@ -3,7 +3,7 @@ A NodeJS-based Discord bot for Garlicoin Pool Servers
 
 This bot requires a Node server with the following `npm` packages installed:
 ```
-Discord.js http https fs
+discord.js http https fs
 ```
 You will also need to visit the [Discord App Portal](https://discordapp.com/developers/docs/intro) to create an app with an App Bot User account and to get the token used for connecting to the Discord network with [DiscordJS](https://discord.js.org). 
 
