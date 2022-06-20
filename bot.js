@@ -99,7 +99,8 @@ discordClient.on("message", message => {
     // Determine if the user is in a role defined in the "bot_admin_roles" declaration to allow for admin commands
     let isAdmin = false;
     for (var i = 0; i < botAdminRoles.length; i++) {
-        if (message.member.roles.find("name", botAdminRoles[i])) isAdmin = true;
+        if (message.member.roles === botAdminRoles[i])
+            isAdmin = true;
     }
 
     // Bot Admin Commands
@@ -185,11 +186,11 @@ discordClient.on("message", message => {
         // Display market cap data for Garlicoin via CoinMarketCap
 
         getCoinData("garlicoin").then(result => {
-            let priceUSD = result[0]["price_usd"];
-            let vol24h = result[0]["24h_volume_usd"];
-            let chg24h = result[0]["percent_change_24h"];
-            let mktCap = result[0]["market_cap_usd"];
-            let supply = result[0]["available_supply"];
+            let priceUSD = result['usd'];
+            let vol24h = result.usd_24h_vol;
+            let chg24h = result.usd_24h_change;
+            let mktCap = result.usd_market_cap;
+            let supply = result.usd_market_cap/result.usd
             let msg = '';
             msg += '```md\n';
             msg += ' Market Cap Data\n';
@@ -479,7 +480,7 @@ function underDevelopment(message) {
 // Query the CoinMarketCap API for the provided coin's value
 function getCoinData(coin) {
     return new Promise(function (resolve, reject) {
-        let url = `https://api.coinmarketcap.com/v1/ticker/${coin}/`;
+        let url = `https://api.coingecko.com/api/v3/simple/price?ids=garlicoin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true&include_last_updated_at=true`;
         https.get(url, (res) => {
             let data = '';
 
@@ -499,7 +500,7 @@ function getCoinData(coin) {
 // Query the pool's API for stats data
 function getJsonStats() {
     return new Promise(function (resolve, reject) {
-        let url = `${config.pool_api_url}/stats`;
+        let url = `${config.pool_api_url}/statistics`;
         http.get(url, (res) => {
             let data = '';
 
@@ -600,7 +601,7 @@ function getVelocity() {
 
 // Set the current Hash Rate and Miner Count as the bot's activity
 function setHashRateActivity() {
-    let activity = `${jsonStats.algos.allium.hashrateString} | ${jsonStats.algos.allium.workers} mining | ${config.prefix}help`;
+    let activity = `${jsonStats.body.primary.hashrate.shared} | ${jsonStats.body.primary.status.workers} mining | ${config.prefix}help`;
     discordClient.user.setActivity(activity, {
         type: 'WATCHING'
     }).catch(O_o => {});
@@ -608,7 +609,7 @@ function setHashRateActivity() {
 
 // Check for any changes in the pool block data and broadcast notifications if something has changed
 function getPoolBlockData() {
-    let blockNode = jsonStats.pools.garlicoin.blocks;
+    let blockNode = jsonStats.body.primary.blocks;
     let msg = '';
     if (blockNode.confirmed + blockNode.pending > latestBlockHeight && latestBlockHeight > 0) {
         consoleLog(`New block solved: #${blockNode.confirmed + blockNode.pending} (${blockNode.confirmed} confirmed, ${blockNode.pending} pending)`);
