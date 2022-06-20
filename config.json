@@ -1,9 +1,9 @@
 {
-    "token" : "NDThisIsNotAReal.Token.GetYoursAtDiscordAppPortal",
-    "name" : "BotNameHere",
-    "server_name" : "",
+    "token" : "",
+    "name" : "GRLC-Federation-Pool-Bot",
+    "server_name" : "GRLC Federation Pool",
     "pool_codebase": "nomp",
-    "pool_api_url" : "",
+    "pool_api_url" : "http://pool.garlico.in:3001/api/v1/garlicoin",
     "prefix" : "!",
-    "bot_admin_roles" : ""
+    "bot_admin_roles" : "Repo Contributor"
 }
