@@ -9,7 +9,7 @@
 // Changelog
 // 2018/04/23   Version 1.0 - Initial Release
 
-let BOT_VERSION = "2.0.1";
+let BOT_VERSION = "2.0.2";
 
 // Define Discord objects
 let Discord = require("discord.js");
@@ -366,6 +366,18 @@ discordClient.on("message", message => {
         msg += `  Total Paid         : ${precisionRound(jsonStats.body.primary.payments.total, 6)} GRLC\n`;
         msg += `  Next Payout        : ${jsonStats.body.primary.payments.next} UTC\n`;
         msg += `  Last Payout        : ${jsonStats.body.primary.payments.last} UTC\n`;
+        msg += 'Servers\n';
+        msg += `  Best Available     : stratum+tcp://pool.garlico.in:3002\n`;
+        msg += `  API                : http://pool.garlico.in:3002\n`;
+        msg += 'Regional Servers\n';
+        msg += `  Montreal           : stratum+tcp://ca.node.garlico.in:3002\n`;
+        msg += `  North California   : stratum+tcp://us.node.garlico.in:3002\n`;
+        msg += `  Frankfurt          : stratum+tcp://de.node.garlico.in:3002\n`;
+        msg += `  Singapore          : stratum+tcp://sg.node.garlico.in:3002\n`;
+        msg += 'Ports\n';
+        msg += `  3002               : TCP Pooled Vardiff (I:4, Mi:1, Mx:25) \n`;
+        msg += `  3003               : TLS Pooled Vardiff (I:4, Mi:1, Mx:25)\n`;
+        msg += `  3069               : TCP Solo Vardiff (I:25, Mi:1, Mx:512)\n`;
         msg += '```';
         sendReply(message, msg);
     } else if (command === "register") {
