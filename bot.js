@@ -9,7 +9,7 @@
 // Changelog
 // 2018/04/23   Version 1.0 - Initial Release
 
-let BOT_VERSION = "2.0.2";
+let BOT_VERSION = "2.0.3";
 
 // Define Discord objects
 let Discord = require("discord.js");
@@ -215,7 +215,7 @@ discordClient.on("message", message => {
             .then((combinedResult) => {
                 let msg = '';
                 msg += '\`\`\`asciidoc\n';
-                msg += ' Current Cryptocurrency Market Data (via CoinMarketCap)\n';
+                msg += ' Current Cryptocurrency Market Data (via CoinGecko)\n';
                 msg += '----------------------------------------------------------------\n';
                 msg += ' Coin         Value (USD)      1hr    |  24hr    |   7d     |   Mkt Cap\n';
                 for (let i = 0; i < coins.length; i++) {
@@ -345,6 +345,9 @@ discordClient.on("message", message => {
         let msg = '';
         msg += '```ml\n';
         msg += 'Info\n'
+        msg += `  Name               : The Garlicoin Federation Pool\n`;
+        msg += `  Website            : https://blinkhash.com/mining/c19a9909-8be9-4cf9-bef4-408ca8165594/dashboard\n`;
+        msg += `  Domain             : garlico.in\n`;
         msg += `  Coin               : ${jsonStats.body.primary.config.coin}\n`;    
         msg += `  Symbol             : ${jsonStats.body.primary.config.symbol}\n`;  
         msg += `  Algorithm          : ${jsonStats.body.primary.config.algorithm}\n`; 
