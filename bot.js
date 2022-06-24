@@ -148,7 +148,6 @@ discordClient.on("message", message => {
         //poolstats : Pool statistics\n
         //velocity  : Pool solve velocity\n
         //workers   : List of current pool workers\n
-        //Payments  : Payment info
         //```
         // Market Data
         //```
@@ -345,21 +344,28 @@ discordClient.on("message", message => {
         // Display a general list of pool statistics
         let msg = '';
         msg += '```ml\n';
+        msg += 'Info\n'
+        msg += `  Coin               : ${jsonStats.body.primary.config.coin}\n`;    
+        msg += `  Symbol             : ${jsonStats.body.primary.config.symbol}\n`;  
+        msg += `  Algorithm          : ${jsonStats.body.primary.config.algorithm}\n`; 
+        msg += `  Payment Interval   : ${jsonStats.body.primary.config.paymentInterval}s\n`;
+        msg += `  Minimum Payout     : ${jsonStats.body.primary.config.minPayment} GRLC\n`;
+        msg += `  Recipient Fee      : ${jsonStats.body.primary.config.recipientFee}%\n`;
         msg += 'Blocks\n'
-        msg += `  Confirmed   : ${latestPoolBlockData[0]+489}\n`;
-        msg += `  Pending     : ${latestPoolBlockData[1]}\n`;
-        msg += `  Kicked      : ${latestPoolBlockData[2]}\n`;
+        msg += `  Confirmed          : ${latestPoolBlockData[0]+489}\n`;
+        msg += `  Pending            : ${latestPoolBlockData[1]}\n`;
+        msg += `  Kicked             : ${latestPoolBlockData[2]}\n`;
         msg += 'Workers\n';
-        msg += `  Count       : ${jsonMiners.body.primary.shared.length}\n`;
-        msg += `  Hashrate    : ${getHashInt( jsonStats.body.primary.hashrate.shared)}\n`;
+        msg += `  Count              : ${jsonMiners.body.primary.shared.length}\n`;
+        msg += `  Hashrate           : ${getHashInt( jsonStats.body.primary.hashrate.shared)}\n`;
         msg += 'Shares\n';
-        msg += `  Valid       : ${jsonStats.body.primary.shares.valid}\n`;
-        msg += `  Stale       : ${jsonStats.body.primary.shares.stale}\n`;
-        msg += `  Invalid     : ${jsonStats.body.primary.shares.invalid}\n`;
+        msg += `  Valid              : ${jsonStats.body.primary.shares.valid}\n`;
+        msg += `  Stale              : ${jsonStats.body.primary.shares.stale}\n`;
+        msg += `  Invalid            : ${jsonStats.body.primary.shares.invalid}\n`;
         msg += 'Payments\n';
-        msg += `  Total Paid  : ${precisionRound(jsonStats.body.primary.payments.total, 6)} GRLC\n`;
-        msg += `  Next Payout : ${jsonStats.body.primary.payments.next} UTC\n`;
-        msg += `  Last Payout : ${jsonStats.body.primary.payments.last} UTC\n`;
+        msg += `  Total Paid         : ${precisionRound(jsonStats.body.primary.payments.total, 6)} GRLC\n`;
+        msg += `  Next Payout        : ${jsonStats.body.primary.payments.next} UTC\n`;
+        msg += `  Last Payout        : ${jsonStats.body.primary.payments.last} UTC\n`;
         msg += '```';
         sendReply(message, msg);
     } else if (command === "register") {
