@@ -9,7 +9,7 @@
 // Changelog
 // 2018/04/23   Version 1.0 - Initial Release
 
-let BOT_VERSION = "1.0";
+let BOT_VERSION = "2.0.1";
 
 // Define Discord objects
 let Discord = require("discord.js");
@@ -26,6 +26,10 @@ let members = require("./members.json");
 
 // Data object declarations
 let jsonStats = {};
+let jsonBlocks = {};
+let jsonWorkers = {};
+let jsonMiners = {};
+let jsonPayments = {};
 let latestPoolVelocity = [0, 0, 0, 0, 0, 0];
 let latestPoolBlockData = [0, 0, 0];
 let latestBlockHeight = 0;
@@ -39,7 +43,7 @@ let logFile = './logs/' + startup.toISOString().replace(/T|Z|-|:/gi, '').substr(
 
 // Announce start up
 consoleLog(`Garlicoin Discord Bot version ${BOT_VERSION} starting up...`);
-consoleLog('Visit https://github.com/Beguiled/GarlicoinDiscordBot for help and updates');
+consoleLog('Visit https://github.com/garlico-in/GarlicoinDiscordBot for help and updates');
 
 // Discord Client "ready" event
 discordClient.on("ready", () => {
@@ -53,7 +57,7 @@ discordClient.on("ready", () => {
 
     // Poll the pool's API for the stats JSON data, then update the poolBlockData array
     consoleLog(`Getting initial pool API data`);
-    getJsonStats().then(result => getPoolBlockData());
+    getJsonPayments().then(getJsonMiners().then(result => getJsonWorkers().then(result => getJsonBlocks().then(result => getJsonStats().then(result => getPoolBlockData())))));
 
     // Set the default activity to 'watching Garlicoin' 
     discordClient.user.setActivity(`Garlicoin | ${config.prefix}help`, {
@@ -144,6 +148,7 @@ discordClient.on("message", message => {
         //poolstats : Pool statistics\n
         //velocity  : Pool solve velocity\n
         //workers   : List of current pool workers\n
+        //Payments  : Payment info
         //```
         // Market Data
         //```
@@ -177,20 +182,20 @@ discordClient.on("message", message => {
         // Display current pool block data
         let msg = '';
         msg += '```ml\n';
-        msg += `Confirmed : ${latestPoolBlockData[0]}\n`;
+        msg += `Confirmed : ${latestPoolBlockData[0]+489}\n`;
         msg += `Pending   : ${latestPoolBlockData[1]}\n`;
-        msg += `Orphaned  : ${latestPoolBlockData[2]}\n`;
+        msg += `Kicked    : ${latestPoolBlockData[2]}\n`;
         msg += '```';
         sendReply(message, msg);
     } else if (command === "cap") {
         // Display market cap data for Garlicoin via CoinMarketCap
 
         getCoinData("garlicoin").then(result => {
-            let priceUSD = result['usd'];
-            let vol24h = result.usd_24h_vol;
-            let chg24h = result.usd_24h_change;
-            let mktCap = result.usd_market_cap;
-            let supply = result.usd_market_cap/result.usd
+            let priceUSD = result.garlicoin.usd;
+            let vol24h = result.garlicoin.usd_24h_vol;
+            let chg24h = result.garlicoin.usd_24h_change;
+            let mktCap = result.garlicoin.usd_market_cap;
+            let supply = result.garlicoin.usd_market_cap/result.garlicoin.usd;
             let msg = '';
             msg += '```md\n';
             msg += ' Market Cap Data\n';
@@ -205,7 +210,7 @@ discordClient.on("message", message => {
         });
     } else if (command === "market") {
         // Display market data pulled from CoinMarketCap
-        let coins = ["bitcoin", "bitcoin-cash", "ethereum", "ripple", "litecoin", "nano", "ravencoin", "garlicoin"];
+        let coins = ["garlicoin", "bitcoin", "ethereum", "bitflowers", "chia", "litecoin", "nano", "banano", "dogecoin", "binancecoin", "avalanche-2"];
         let combinedResult = [];
         Promise.all(coins.map(coin => getCoinData(coin)))
             .then((combinedResult) => {
@@ -213,14 +218,14 @@ discordClient.on("message", message => {
                 msg += '\`\`\`asciidoc\n';
                 msg += ' Current Cryptocurrency Market Data (via CoinMarketCap)\n';
                 msg += '----------------------------------------------------------------\n';
-                msg += ' Coin    Value (USD)      1hr  |    24hr  |     7d   |  Mkt Cap \n';
+                msg += ' Coin         Value (USD)      1hr    |  24hr    |   7d     |   Mkt Cap\n';
                 for (let i = 0; i < coins.length; i++) {
-                    let coinData = combinedResult[i][0];
-                    let price = Number.parseFloat(coinData.price_usd).toFixed(coinData.price_usd < 10 ? 4 : 2).padStart(7, " ");
-                    let change1h = Number.parseFloat(coinData.percent_change_1h).toFixed(2);
-                    let change24h = Number.parseFloat(coinData.percent_change_24h).toFixed(2);
-                    let change7d = Number.parseFloat(coinData.percent_change_7d).toFixed(2);
-                    let mktcap = Number.parseFloat(coinData.market_cap_usd);
+                    let coinData = combinedResult[i][coins[i]];
+                    let price = Number.parseFloat(coinData.usd).toFixed(coinData.usd < 10 ? 4 : 2).padStart(8, " ");
+                    let change1h = Number.parseFloat(coinData.usd_24h_change).toFixed(2);
+                    let change24h = Number.parseFloat(coinData.usd_24h_change).toFixed(2);
+                    let change7d = Number.parseFloat(coinData.usd_24h_change).toFixed(2);
+                    let mktcap = Number.parseFloat(coinData.usd_market_cap);
                     let denom = "";
                     if (mktcap > 1000000000) {
                         denom = "B";
@@ -241,10 +246,10 @@ discordClient.on("message", message => {
                     change1h = change1h.padStart(7, " ");
                     change24h = change24h.padStart(7, " ");
                     change7d = change7d.padStart(7, " ");
-                    mktcap = mktcap.padStart(7, " ");
-                    msg += ` ${coinData.symbol.padEnd(9, " ")}`;
-                    msg += `$ ${price}`;
-                    msg += `   `;
+                    mktcap = mktcap.padStart(8, " ");
+                    msg += ` ${coins[i].padEnd(11, " ")}`;
+                    msg += `  $ ${price}`;
+                    msg += `     `;
                     msg += `${change1h}%`;
                     msg += ` | `;
                     msg += `${change24h}%`;
@@ -266,16 +271,49 @@ discordClient.on("message", message => {
             members[messageSender.id].wallet = "";
 
         let msg = '';
+        let tempHashrate = 0;
         if (members[messageSender.id].wallet > "") {
             let walletID = members[messageSender.id].wallet;
-            let workerNode = jsonStats.pools.garlicoin.workers[walletID];
-            let payout = calculatePayout(workerNode.hashrateString);
+            let minerNode = jsonMiners.body.primary.shared;
+            let payout = 0;
+            let shares = 0;
+            let invalid = 0;
+            let stale = 0
+
+            //let hashratePromise = new Promise(function(resolve, reject) {
+                try{
+                    for (i = 0; i < jsonMiners.body.primary.shared.length; i++) {
+                        let miner = jsonMiners.body.primary.shared[i].miner;
+                        if(miner == walletID){
+                            payout = jsonPayments.body.primary.generate[miner];
+                            //resolve(tempHashrate = minerNode[i].hashrate);
+                            tempHashrate = minerNode[i].hashrate;
+                            shares = minerNode[i].shares.valid;
+                            invalid = minerNode[i].shares.invalid;
+                            stale = minerNode[i].shares.stale;
+                        }
+                    }
+                }catch (e){
+                    consoleLog(e);
+                    //reject(e);
+                }
+            //});
+
+            try{
+            //hashratePromise//.then(result => function() {
             msg = '';
             msg += '```';
-            msg += `Address    : ${walletID}\n`;
-            msg += `Hashrate   : ${workerNode.hashrateString}\n`
-            msg += `Est Payout : ${payout}\n`;
+            msg += `             Address : ${walletID}\n`;
+            msg += `            Hashrate : ${tempHashrate}\n`
+            msg += `    Estimated Payout : ${payout}\n`;
+            msg += ` Shares (This Round) : ${shares}\n`;
+            msg += `Invalid (This Round) : ${invalid}\n`;
+            msg += `  Stale (This Round) : ${stale}\n`;
             msg += '```';
+            //});
+            }catch (e){
+                consoleLog(e);
+            }
         } else {
             // User has not set their wallet address yet - instruct them on how to do so
             msg = `${messageSender} you have not defined your wallet address yet. Please use \`${config.prefix}register [wallet]\` to do so.`;
@@ -308,16 +346,20 @@ discordClient.on("message", message => {
         let msg = '';
         msg += '```ml\n';
         msg += 'Blocks\n'
-        msg += `  Confirmed  : ${jsonStats.pools.garlicoin.blocks.confirmed}\n`;
-        msg += `  Pending    : ${jsonStats.pools.garlicoin.blocks.pending}\n`;
-        msg += `  Orphaned   : ${jsonStats.pools.garlicoin.blocks.orphaned}\n`;
+        msg += `  Confirmed   : ${latestPoolBlockData[0]+489}\n`;
+        msg += `  Pending     : ${latestPoolBlockData[1]}\n`;
+        msg += `  Kicked      : ${latestPoolBlockData[2]}\n`;
         msg += 'Workers\n';
-        msg += `  Count      : ${jsonStats.algos.allium.workers}\n`;
-        msg += `  Hashrate   : ${jsonStats.algos.allium.hashrateString}\n`;
+        msg += `  Count       : ${jsonMiners.body.primary.shared.length}\n`;
+        msg += `  Hashrate    : ${getHashInt( jsonStats.body.primary.hashrate.shared)}\n`;
         msg += 'Shares\n';
-        msg += `  Valid      : ${jsonStats.pools.garlicoin.poolStats.validShares}\n`;
-        msg += `  Invalid    : ${jsonStats.pools.garlicoin.poolStats.invalidShares}\n`;
-        msg += `  Total Paid : ${precisionRound(jsonStats.pools.garlicoin.poolStats.totalPaid, 5)} GRLC\n`;
+        msg += `  Valid       : ${jsonStats.body.primary.shares.valid}\n`;
+        msg += `  Stale       : ${jsonStats.body.primary.shares.stale}\n`;
+        msg += `  Invalid     : ${jsonStats.body.primary.shares.invalid}\n`;
+        msg += 'Payments\n';
+        msg += `  Total Paid  : ${precisionRound(jsonStats.body.primary.payments.total, 6)} GRLC\n`;
+        msg += `  Next Payout : ${jsonStats.body.primary.payments.next} UTC\n`;
+        msg += `  Last Payout : ${jsonStats.body.primary.payments.last} UTC\n`;
         msg += '```';
         sendReply(message, msg);
     } else if (command === "register") {
@@ -384,13 +426,14 @@ discordClient.on("message", message => {
     } else if (command === "workers") {
         // Display the list of workers currently mining and their hashrate
         let msg = '';
-        let workers = jsonStats.pools.garlicoin.workers;
+        let workers = jsonMiners.body.primary.shared;
         let workerArray = [];
         let idx = 0;
-        Object.keys(workers).forEach(worker => {
+        Object.keys(workers).forEach(worker_iterator => {
             let w = {
-                wallet: worker,
-                hashInt: getHashInt(workers[worker].hashrateString)
+                worker: workers[worker_iterator].miner,
+                hashInt: getHashInt(workers[worker_iterator].hashrate),
+                hashrate: workers[worker_iterator].hashrate
             };
             workerArray[idx] = w;
             idx++;
@@ -398,7 +441,7 @@ discordClient.on("message", message => {
 
         // Sort from highest to lowest hashrate
         workerArray.sort(function (a, b) {
-            return a.hashInt - b.hashInt
+            return a.hashrate- b.hashrate
         }).reverse();
 
         // Display list
@@ -406,10 +449,10 @@ discordClient.on("message", message => {
         if (workerArray.length >= 10) padStart++;
         if (workerArray.length >= 100) padStart++;
         msg += '```cpp\n';
-        msg += `${jsonStats.algos.allium.workers.toString().padStart(4 + padStart)} miners -- ${jsonStats.algos.allium.hashrateString}\n`;
+        msg += `${jsonMiners.body.primary.shared.length.toString().padStart(4 + padStart)} Miners -- ${jsonStats.body.primary.hashrate.shared} H/s\n`;
         for (let i = 0; i < workerArray.length; i++) {
-            let wallet = workerArray[i].wallet;
-            msg += `${(i + 1).toString().padStart(padStart)}  ${wallet.substr(0,6)}...${wallet.substr(-4)}  ${workers[wallet].hashrateString.padStart(9)}\n`;
+            let wallet = workerArray[i].worker;
+            msg += ` ${(i + 1).toString().padStart(padStart)}  ${wallet.substr(0,6)}...${wallet.substr(-4)}  ${workerArray[i].hashInt.toString().padStart(9)}\n`;
         }
         msg += '```';
         sendReply(message, msg);
@@ -467,7 +510,7 @@ function writeToFile(file, data) {
 // Reply to an incoming message with given text
 function sendReply(message, text) {
     message.channel.send(text).catch(function (error) {
-        consoleLog(`Error encountered in sendReply\r\n${e}`)
+        consoleLog(`Error encountered in sendReply\r\n${error}`)
     });
 }
 
@@ -480,7 +523,7 @@ function underDevelopment(message) {
 // Query the CoinMarketCap API for the provided coin's value
 function getCoinData(coin) {
     return new Promise(function (resolve, reject) {
-        let url = `https://api.coingecko.com/api/v3/simple/price?ids=garlicoin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true&include_last_updated_at=true`;
+        let url = `https://api.coingecko.com/api/v3/simple/price?ids=${coin}&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true&include_last_updated_at=true`;
         https.get(url, (res) => {
             let data = '';
 
@@ -524,6 +567,128 @@ function getJsonStats() {
     });
 }
 
+function getJsonBlocks() {
+    return new Promise(function (resolve, reject) {
+        let url = `${config.pool_api_url}/blocks`;
+        http.get(url, (res) => {
+            let data = '';
+
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            res.on('end', () => {
+                try {
+                    let json = JSON.parse(data);
+                    jsonBlocks = json;
+                    resolve(jsonBlocks);
+                } catch (e) {
+                    resolve(jsonBlocks);
+                }
+            }).on('error', (e) => {
+                consoleLog(`Error in getJsonBlocks\n${e}`);
+                resolve(jsonBlocks);
+            });
+        });
+    });
+}
+
+function getJsonWorkers() {
+    return new Promise(function (resolve, reject) {
+        let url = `${config.pool_api_url}/workers`;
+        http.get(url, (res) => {
+            let data = '';
+
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            res.on('end', () => {
+                try {
+                    let json = JSON.parse(data);
+                    jsonWorkers = json;
+                    resolve(jsonWorkers);
+                } catch (e) {
+                    resolve(jsonWorkers);
+                }
+            }).on('error', (e) => {
+                consoleLog(`Error in getJsonWorkers\n${e}`);
+                resolve(jsonWorkers);
+            });
+        });
+    });
+}
+
+function getJsonMiners() {
+    return new Promise(function (resolve, reject) {
+        let url = `${config.pool_api_url}/miners`;
+        http.get(url, (res) => {
+            let data = '';
+
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            res.on('end', () => {
+                try {
+                    let json = JSON.parse(data);
+                    jsonMiners = json;
+                    resolve(jsonMiners);
+                } catch (e) {
+                    resolve(jsonMiners);
+                }
+            }).on('error', (e) => {
+                consoleLog(`Error in getJsonMiners\n${e}`);
+                resolve(jsonMiners);
+            });
+        });
+    });
+}
+
+function getJsonPayments() {
+    return new Promise(function (resolve, reject) {
+        let url = `${config.pool_api_url}/payments`;
+        http.get(url, (res) => {
+            let data = '';
+
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            res.on('end', () => {
+                try {
+                    let json = JSON.parse(data);
+                    jsonPayments = json;
+                    resolve(jsonPayments);
+                } catch (e) {
+                    resolve(jsonPayments);
+                }
+            }).on('error', (e) => {
+                consoleLog(`Error in getJsonMiners\n${e}`);
+                resolve(jsonPayments);
+            });
+        });
+    });
+}
+
+//Get index of worker node
+function getWorkerIndex(worker) {
+    for (i = 0; i < jsonWorkers.body.primary.shared.length; i++){
+        if(jsonWorkers.body.primary.shared[i]==worker){
+            return i;
+        }
+    }
+}
+
+//Get index of miner node
+function getMinerIndex(miner) {
+    for (i = 0; i < jsonMiners.body.primary.shared.length; i++){
+        if(jsonMiners.body.primary.shared[i]==miner){
+            return i;
+        }
+    }
+}
+
 // Calculate the current block solve velocity for the pool
 function getVelocity() {
     
@@ -531,7 +696,7 @@ function getVelocity() {
     // NOMP codebase
     if (config.pool_codebase.toLowerCase() === 'nomp') {
         return new Promise(function (resolve, reject) {
-            let url = `${config.pool_api_url}/pool_stats`;
+            let url = `${config.pool_api_url}/historical`;
             http.get(url, (res) => {
                 let data = '';
 
@@ -547,15 +712,15 @@ function getVelocity() {
                         let blockHeight = 0;
                         let oldest_data_point = 0;
                         for (let i = 0; i < json.length; i++) {
-                            let dateStamp = new Date(json[i].time * 1000);
+                            let dateStamp = new Date(json[i].body.primary[0].time * 1000);
                             let ticksPerHour = 3600000;
                             let timeDiff = (dateStampNow - dateStamp) / ticksPerHour;
 
                             if (oldest_data_point == 0)
                                 oldest_data_point = Math.ceil(timeDiff); // Determine how many hours ago the oldest data point is
 
-                            let pendingBlocks = json[i].pools.garlicoin.blocks.pending;
-                            let confirmedBlocks = json[i].pools.garlicoin.blocks.confirmed;
+                            let pendingBlocks = latestPoolBlockData[1];
+                            let confirmedBlocks = latestPoolBlockData[0]+489;
                             curBlockHeight = Number(pendingBlocks) + Number(confirmedBlocks);
                             if (curBlockHeight > blockHeight) {
                                 pendBlock = pendingBlocks;
@@ -609,20 +774,20 @@ function setHashRateActivity() {
 
 // Check for any changes in the pool block data and broadcast notifications if something has changed
 function getPoolBlockData() {
-    let blockNode = jsonStats.body.primary.blocks;
+    let blockNode = jsonBlocks.body.primary;
     let msg = '';
-    if (blockNode.confirmed + blockNode.pending > latestBlockHeight && latestBlockHeight > 0) {
-        consoleLog(`New block solved: #${blockNode.confirmed + blockNode.pending} (${blockNode.confirmed} confirmed, ${blockNode.pending} pending)`);
+    if (blockNode.confirmed.length + blockNode.pending.length > latestBlockHeight && latestBlockHeight > 0) {
+        consoleLog(`New block solved: #${blockNode.confirmed.length + blockNode.pending.length} (${blockNode.confirmed.length} confirmed, ${blockNode.pending.length} pending)`);
         msg += '```css\n';
-        msg += `We solved a block! (#${blockNode.confirmed + blockNode.pending})\n`;
-        msg += `${blockNode.confirmed} confirmed, ${blockNode.pending} pending\n`;
+        msg += `We solved a block! (#${blockNode.confirmed.length + blockNode.pending.length})\n`;
+        msg += `${blockNode.confirmed.length} confirmed, ${blockNode.pending.length} pending\n`;
         msg += '```';
     }
-    if (blockNode.confirmed > latestConfirmed && latestConfirmed > 0) {
-        consoleLog(`Block confirmed: #${blockNode.confirmed} (${blockNode.confirmed} confirmed, ${blockNode.pending} pending)`);
+    if (blockNode.confirmed.length > latestConfirmed && latestConfirmed > 0) {
+        consoleLog(`Block confirmed: #${blockNode.confirmed.length} (${blockNode.confirmed.length} confirmed, ${blockNode.pending.length} pending)`);
         msg += '```css\n';
-        msg += `Block #${blockNode.confirmed} has been confirmed!\n`;
-        msg += `${blockNode.confirmed} confirmed, ${blockNode.pending} pending\n`;
+        msg += `Block #${blockNode.confirmed.length} has been confirmed!\n`;
+        msg += `${blockNode.confirmed.length} confirmed, ${blockNode.pending.length} pending\n`;
         msg += '```';
     }
     if (msg.length > 0) {
@@ -638,9 +803,9 @@ function getPoolBlockData() {
             broadcast(msg);
     }
 
-    latestPoolBlockData = [blockNode.confirmed, blockNode.pending, blockNode.orphaned];
-    latestBlockHeight = blockNode.confirmed + blockNode.pending;
-    latestConfirmed = blockNode.confirmed;
+    latestPoolBlockData = [jsonStats.body.primary.blocks.valid, blockNode.pending.length, blockNode.kicked.length];
+    latestBlockHeight = blockNode.confirmed.length + blockNode.pending.length;
+    latestConfirmed = blockNode.confirmed.length;
 }
 
 // Broadcasts message to all channels in the channels 
@@ -658,16 +823,17 @@ function broadcast(message) {
 // Note: This is nowhere near an exact value. It bases the result on the current pool hash rate which can fluctuate
 // greatly based on the number of workers are involved. Ultimately this result is much closer in larger pools.
 // The API does not surface the current submitted share data so we have to do a best guess based on hash rate reports.
-function calculatePayout(hashrateString) {
-    return precisionRound(getHashInt(hashrateString) / parseFloat(jsonStats.algos.allium.hashrate) * 50, 5) + " GRLC";
+function calculatePayout(hashrate) {
+    return precisionRound(hashrate / parseFloat(jsonStats.body.primary.hashrate.shared) * 50, 5) + " GRLC";
 }
 
 // Convert a hashrateString into an int representing hashes per second
-function getHashInt(hashrateString) {
-    let workerHashrate = parseFloat(hashrateString);
-    let hashSize = hashrateString.substr(hashrateString.length - 2, 2);
-    if (hashSize === "KH") workerHashrate *= 1000;
-    if (hashSize === "MH") workerHashrate *= 1000000;
+function getHashInt(hashrate) {
+    let workerHashrate = hashrate;
+    let hashSize = hashrate;
+    if (hashSize < 1000) workerHashrate = (workerHashrate).toString()+` H/s`
+    else if (hashSize < 1000000 && hashSize >= 1000) workerHashrate = (workerHashrate/1000).toString()+` KH/s`;
+    else if (hashSize >= 1000000)  workerHashrate = (workerHashrate/1000000).toString()+` MH/s`;
     return workerHashrate;
 }
 
@@ -691,9 +857,9 @@ function saveMembers(reason) {
 }
 
 // Activate any timer-based functions
-setInterval(getJsonStats, 5000);
-setInterval(getPoolBlockData, 2500);
-setInterval(setHashRateActivity, 5000);
+setInterval(getJsonMiners, 10000);
+setInterval(getPoolBlockData, 5000);
+setInterval(setHashRateActivity, 10000);
 
 // Log in to Discord to be present online
 discordClient.login(config.token);
