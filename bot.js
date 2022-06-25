@@ -370,6 +370,7 @@ discordClient.on("message", message => {
         msg += `  Next Payout        : ${new Date(jsonStats.body.primary.payments.next).toISOString()}\n`;
         msg += `  Last Payout        : ${new Date(jsonStats.body.primary.payments.last).toISOString()}\n`;
         msg += 'Servers\n';
+        msg += `  Fastest (Beta)     : stratum+tcp://accelerator.pool.garlico.in:3002\n`;
         msg += `  Best Available     : stratum+tcp://pool.garlico.in:3002\n`;
         msg += `  API                : http://pool.garlico.in:3002\n`;
         msg += 'Regional Servers\n';
