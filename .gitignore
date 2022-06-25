@@ -58,3 +58,4 @@ typings/
 .env
 
 members.json
+config.json
