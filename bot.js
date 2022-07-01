@@ -9,7 +9,7 @@
 // Changelog
 // 2018/04/23   Version 1.0 - Initial Release
 
-let BOT_VERSION = "2.0.3";
+let BOT_VERSION = "2.1.0";
 
 // Define Discord objects
 let Discord = require("discord.js");
@@ -19,10 +19,29 @@ let discordClient = new Discord.Client();
 let http = require('http');
 let https = require('https');
 let fs = require('fs');
+const { channel } = require("diagnostics_channel");
+
+// Define start up timestamp (mainly for logging)
+// We can then store all logging output to a timestamped log file which is helpful in case the script must be restarted
+let startup = new Date();
+let logFile = './logs/' + startup.toISOString().replace(/T|Z|-|:/gi, '').substr(0, 14) + '.log';
 
 // JSON data storage objects
-let config = require("./config.json");
-let members = require("./members.json");
+let config = []
+let members = []
+
+//Read config and memberts
+try {
+    config = require("./config.json");
+} catch (e) {
+    consoleLog(`Error reading config.json\n${e}`)    
+}
+
+try {
+    members = require("./members.json");
+} catch (e) {
+    consoleLog(`Error reading members.json\n${e}`)    
+}
 
 // Data object declarations
 let jsonStats = {};
@@ -35,11 +54,11 @@ let latestPoolBlockData = [0, 0, 0];
 let latestBlockHeight = 0;
 let latestConfirmed = 0;
 let botAdminRoles = [];
+let botChannels = [];
+let serverChannels = [];
+let latestBlock = [];
+let lastMessage = '';
 
-// Define start up timestamp (mainly for logging)
-// We can then store all logging output to a timestamped log file which is helpful in case the script must be restarted
-let startup = new Date();
-let logFile = './logs/' + startup.toISOString().replace(/T|Z|-|:/gi, '').substr(0, 14) + '.log';
 
 // Announce start up
 consoleLog(`Garlicoin Discord Bot version ${BOT_VERSION} starting up...`);
@@ -55,14 +74,29 @@ discordClient.on("ready", () => {
     consoleLog(`Setting admin roles to ${config.bot_admin_roles}`);
     botAdminRoles = config.bot_admin_roles.split(",");
 
+    //Define channels
+    consoleLog(`Setting channels to ${config.channels}`);
+    botChannels = config.channels.split(",");
+
     // Poll the pool's API for the stats JSON data, then update the poolBlockData array
     consoleLog(`Getting initial pool API data`);
-    getJsonPayments().then(getJsonMiners().then(result => getJsonWorkers().then(result => getJsonBlocks().then(result => getJsonStats().then(result => getPoolBlockData())))));
-
+    try{
+        getJsonPayments().then(
+            getJsonMiners().then(
+            result => getJsonWorkers().then(
+            result => getJsonBlocks().then(
+            result => getJsonStats().then(
+            result => getPoolBlockData(                    
+        ))))));
+    }catch(e){
+        consoleLog(`Exception in gathering pool API data \n${e}`)
+    }
     // Set the default activity to 'watching Garlicoin' 
     discordClient.user.setActivity(`Garlicoin | ${config.prefix}help`, {
         type: 'WATCHING'
     }).catch(O_o => {});
+
+    serverChannels = discordClient.channels
 
     consoleLog(`Listening for commands with prefix ${config.prefix}`);
 
@@ -360,7 +394,8 @@ discordClient.on("message", message => {
         msg += `  Kicked             : ${latestPoolBlockData[2]}\n`;
         msg += 'Workers\n';
         msg += `  Count              : ${jsonMiners.body.primary.shared.length}\n`;
-        msg += `  Hashrate           : ${getHashInt( jsonStats.body.primary.hashrate.shared)}\n`;
+        msg += `  Pooled Hashrate    : ${getHashInt( jsonStats.body.primary.hashrate.shared)}\n`;
+        msg += `  Solo Hashrate      : ${getHashInt( jsonStats.body.primary.hashrate.solo)}\n`;
         msg += 'Shares\n';
         msg += `  Valid              : ${jsonStats.body.primary.shares.valid}\n`;
         msg += `  Stale              : ${jsonStats.body.primary.shares.stale}\n`;
@@ -372,7 +407,7 @@ discordClient.on("message", message => {
         msg += 'Servers\n';
         msg += `  Fastest (Beta)     : stratum+tcp://accelerator.pool.garlico.in:3002\n`;
         msg += `  Best Available     : stratum+tcp://pool.garlico.in:3002\n`;
-        msg += `  API                : http://pool.garlico.in:3002\n`;
+        msg += `  API                : http://pool.garlico.in:3001\n`;
         msg += 'Regional Servers\n';
         msg += `  Montreal           : stratum+tcp://ca.node.garlico.in:3002\n`;
         msg += `  North California   : stratum+tcp://us.node.garlico.in:3002\n`;
@@ -556,6 +591,7 @@ function getCoinData(coin) {
             res.on('end', () => {
                 resolve(JSON.parse(data));
             }).on('error', (e) => {
+                consoleLog(`Error in getCoinData\n${e}`);
                 reject(e);
             });
         });
@@ -577,18 +613,21 @@ function getJsonStats() {
                 try {
                     let json = JSON.parse(data);
                     jsonStats = json;
+                    consoleLog(`Successful: getJsonStats collection`);
                     resolve(jsonStats);
                 } catch (e) {
+                    consoleLog(`Error in getJsonStats: ${e}`);
                     resolve(jsonStats);
                 }
             }).on('error', (e) => {
-                consoleLog(`Error in getJsonStats\n${e}`);
+                consoleLog(`Error in getJsonStats: ${e}`);
                 resolve(jsonStats);
             });
         });
     });
 }
 
+//get block data from API
 function getJsonBlocks() {
     return new Promise(function (resolve, reject) {
         let url = `${config.pool_api_url}/blocks`;
@@ -603,18 +642,21 @@ function getJsonBlocks() {
                 try {
                     let json = JSON.parse(data);
                     jsonBlocks = json;
+                    consoleLog(`Successful: getJsonBlocks collection`);
                     resolve(jsonBlocks);
                 } catch (e) {
+                    consoleLog(`Error in getJsonBlocks: ${e}`);
                     resolve(jsonBlocks);
                 }
             }).on('error', (e) => {
-                consoleLog(`Error in getJsonBlocks\n${e}`);
+                consoleLog(`Error in getJsonBlocks: ${e}`);
                 resolve(jsonBlocks);
             });
         });
     });
 }
 
+//get worker data from api
 function getJsonWorkers() {
     return new Promise(function (resolve, reject) {
         let url = `${config.pool_api_url}/workers`;
@@ -629,18 +671,21 @@ function getJsonWorkers() {
                 try {
                     let json = JSON.parse(data);
                     jsonWorkers = json;
+                    consoleLog(`Successful: getJsonWorkers collection`);
                     resolve(jsonWorkers);
                 } catch (e) {
+                    consoleLog(`Error in getJsonWorkers: ${e}`);
                     resolve(jsonWorkers);
                 }
             }).on('error', (e) => {
-                consoleLog(`Error in getJsonWorkers\n${e}`);
+                consoleLog(`Error in getJsonWorkers: ${e}`);
                 resolve(jsonWorkers);
             });
         });
     });
 }
 
+//get miner data from api
 function getJsonMiners() {
     return new Promise(function (resolve, reject) {
         let url = `${config.pool_api_url}/miners`;
@@ -655,18 +700,21 @@ function getJsonMiners() {
                 try {
                     let json = JSON.parse(data);
                     jsonMiners = json;
+                    consoleLog(`Successful: getJsonMiners collection`);
                     resolve(jsonMiners);
                 } catch (e) {
+                    consoleLog(`Error in getJsonMiners: ${e}`);
                     resolve(jsonMiners);
                 }
             }).on('error', (e) => {
-                consoleLog(`Error in getJsonMiners\n${e}`);
+                consoleLog(`Error in getJsonMiners: ${e}`);
                 resolve(jsonMiners);
             });
         });
     });
 }
 
+//get payment data from api
 function getJsonPayments() {
     return new Promise(function (resolve, reject) {
         let url = `${config.pool_api_url}/payments`;
@@ -681,34 +729,18 @@ function getJsonPayments() {
                 try {
                     let json = JSON.parse(data);
                     jsonPayments = json;
+                    consoleLog(`Successful: getJsonPayments collection`);
                     resolve(jsonPayments);
                 } catch (e) {
+                    consoleLog(`Error in getJsonPayments: ${e}`);
                     resolve(jsonPayments);
                 }
             }).on('error', (e) => {
-                consoleLog(`Error in getJsonMiners\n${e}`);
+                consoleLog(`Error in getJsonPaymentss: ${e}`);
                 resolve(jsonPayments);
             });
         });
     });
-}
-
-//Get index of worker node
-function getWorkerIndex(worker) {
-    for (i = 0; i < jsonWorkers.body.primary.shared.length; i++){
-        if(jsonWorkers.body.primary.shared[i]==worker){
-            return i;
-        }
-    }
-}
-
-//Get index of miner node
-function getMinerIndex(miner) {
-    for (i = 0; i < jsonMiners.body.primary.shared.length; i++){
-        if(jsonMiners.body.primary.shared[i]==miner){
-            return i;
-        }
-    }
 }
 
 // Calculate the current block solve velocity for the pool
@@ -798,22 +830,44 @@ function setHashRateActivity() {
 function getPoolBlockData() {
     let blockNode = jsonBlocks.body.primary;
     let msg = '';
-    if (blockNode.confirmed.length + blockNode.pending.length > latestBlockHeight && latestBlockHeight > 0) {
-        consoleLog(`New block solved: #${blockNode.confirmed.length + blockNode.pending.length} (${blockNode.confirmed.length} confirmed, ${blockNode.pending.length} pending)`);
-        msg += '```css\n';
-        msg += `We solved a block! (#${blockNode.confirmed.length + blockNode.pending.length})\n`;
-        msg += `${blockNode.confirmed.length} confirmed, ${blockNode.pending.length} pending\n`;
-        msg += '```';
+
+    //Check for undefined objects
+    if (typeof latestBlock === 'undefined'){
+        latestBlock = blockNode.pending[0];
     }
-    if (blockNode.confirmed.length > latestConfirmed && latestConfirmed > 0) {
+    if (typeof latestConfirmedBlock === 'undefined'){
+        latestConfirmedBlock = blockNode.confirmed[0];
+    }
+    
+    try{
+        if (blockNode.pending[0].height > latestBlock.height) {
+            latestBlock = blockNode.pending[0];
+            consoleLog(`New block solved: #${jsonStats.body.primary.blocks.valid+489 + blockNode.pending.length} (${jsonStats.body.primary.blocks.valid+489} confirmed, ${blockNode.pending.length} pending)`);
+            msg += '```css\n';
+            msg += `We solved a block! (#${blockNode.pending[0].height})\n`;
+            msg += `${jsonStats.body.primary.blocks.valid+489} confirmed, ${blockNode.pending.length} pending\n`;
+            msg += ` Difficulty: ${latestBlock.difficulty}\n`;
+            msg += `       Hash: ${latestBlock.hash}\n`;
+            msg += `       Luck: ${latestBlock.luck}\n`;
+            msg += `     Reward: ${latestBlock.reward/100000000}\n`;
+            msg += `      Round: ${latestBlock.round}\n`;
+            msg += `       Solo: ${latestBlock.solo}\n`;
+            msg += `Transaction: ${latestBlock.transaction}\n`;
+            msg += `     Worker: ${latestBlock.worker}\n`;
+            msg += '```';
+        }
+    }catch(e) {
+        consoleLog(e)
+    }
+    if (blockNode.confirmed[0].height > latestConfirmedBlock.height) {
         consoleLog(`Block confirmed: #${blockNode.confirmed.length} (${blockNode.confirmed.length} confirmed, ${blockNode.pending.length} pending)`);
         msg += '```css\n';
-        msg += `Block #${blockNode.confirmed.length} has been confirmed!\n`;
-        msg += `${blockNode.confirmed.length} confirmed, ${blockNode.pending.length} pending\n`;
+        msg += `Block #${blockNode.confirmed[0].height} has been confirmed!\n`;
+        msg += `${latestPoolBlockData[0]+489} confirmed, ${blockNode.pending.length} pending\n`;
         msg += '```';
     }
     if (msg.length > 0) {
-        broadcast(msg);
+        broadcastBlock(msg);
 
         msg = '';
         // Add any notifications for members seeking mentions
@@ -828,17 +882,37 @@ function getPoolBlockData() {
     latestPoolBlockData = [jsonStats.body.primary.blocks.valid, blockNode.pending.length, blockNode.kicked.length];
     latestBlockHeight = blockNode.confirmed.length + blockNode.pending.length;
     latestConfirmed = blockNode.confirmed.length;
+    latestBlock = blockNode.pending[0];
+    latestConfirmedBlock = blockNode.confirmed[0];
 }
 
 // Broadcasts message to all channels in the channels 
 function broadcast(message) {
     if (message.length == 0) return;
 
-    discordClient.channels.forEach(function (chan) {
-        if (chan.type === "text") {
-            chan.send(message).catch(O_o => {}); // Catch to avoid logging channel permission issues
-        }
-    });
+//    for(channel in discordClient.channels)(function (chan) {
+//        if (chan.type === "text") {
+//            chan.send(message).catch(O_o => {}); // Catch to avoid logging channel permission issues
+//        }
+//    });
+}
+
+function broadcastBlock(message) {
+    if (message.length == 0) return;
+
+    try {
+        botChannels.forEach(async function (id){
+            if(lastMessage != message){
+                const channel = await discordClient.channels.fetch(id);
+                channel.send(message);
+            }else{
+                consoleLog(`Duplicate Block Message Suppressed`)
+            }
+            lastMessage = message;
+        });
+    } catch (e) {
+        consoleLog(`Error broadcating blocks to channels: ${e}`)
+    }
 }
 
 // Determine the amount being paid out
@@ -879,9 +953,18 @@ function saveMembers(reason) {
 }
 
 // Activate any timer-based functions
+setInterval(getJsonPayments, 10000);
 setInterval(getJsonMiners, 10000);
-setInterval(getPoolBlockData, 5000);
+setInterval(getJsonWorkers, 10000);
+setInterval(getJsonBlocks, 10000);
+setInterval(getJsonStats, 10000);
+setInterval(getPoolBlockData, 10000);
 setInterval(setHashRateActivity, 10000);
 
 // Log in to Discord to be present online
-discordClient.login(config.token);
+try{
+    discordClient.login(config.token);
+}
+catch(e){
+    consoleLog(`Error in discord login\n${e}`)
+}
