@@ -4,12 +4,15 @@
 // https://github.com/Beguiled/GarlicoinDiscordBot
 //
 // Created by Jason Egan (beguil3d#2285)
+// Edited for Blinkhash by jorge@garlicoin.io
 // Version 1.0
 
 // Changelog
 // 2018/04/23   Version 1.0 - Initial Release
+// 2022/06/25   Version 2.0 - Blinkhash Fork
+// 2022/07/01   Version 2.1
 
-let BOT_VERSION = "2.1.0";
+let BOT_VERSION = "2.1.1";
 
 // Define Discord objects
 let Discord = require("discord.js");
@@ -859,13 +862,13 @@ function getPoolBlockData() {
     }catch(e) {
         consoleLog(e)
     }
-    if (blockNode.confirmed[0].height > latestConfirmedBlock.height) {
-        consoleLog(`Block confirmed: #${blockNode.confirmed.length} (${blockNode.confirmed.length} confirmed, ${blockNode.pending.length} pending)`);
-        msg += '```css\n';
-        msg += `Block #${blockNode.confirmed[0].height} has been confirmed!\n`;
-        msg += `${latestPoolBlockData[0]+489} confirmed, ${blockNode.pending.length} pending\n`;
-        msg += '```';
-    }
+    //if (blockNode.confirmed[0].height > latestConfirmedBlock.height) {
+    //    consoleLog(`Block confirmed: #${blockNode.confirmed.length} (${blockNode.confirmed.length} confirmed, ${blockNode.pending.length} pending)`);
+    //    msg += '```css\n';
+    //    msg += `Block #${blockNode.confirmed[0].height} has been confirmed!\n`;
+    //    msg += `${latestPoolBlockData[0]+489} confirmed, ${blockNode.pending.length} pending\n`;
+    //    msg += '```';
+    //}
     if (msg.length > 0) {
 
         // Add any notifications for members seeking mentions
