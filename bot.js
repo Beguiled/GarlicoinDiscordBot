@@ -9,7 +9,7 @@
 // Changelog
 // 2018/04/23   Version 1.0 - Initial Release
 
-let BOT_VERSION = "2.0.1";
+let BOT_VERSION = "2.1.0";
 
 // Define Discord objects
 let Discord = require("discord.js");
@@ -19,10 +19,29 @@ let discordClient = new Discord.Client();
 let http = require('http');
 let https = require('https');
 let fs = require('fs');
+const { channel } = require("diagnostics_channel");
+
+// Define start up timestamp (mainly for logging)
+// We can then store all logging output to a timestamped log file which is helpful in case the script must be restarted
+let startup = new Date();
+let logFile = './logs/' + startup.toISOString().replace(/T|Z|-|:/gi, '').substr(0, 14) + '.log';
 
 // JSON data storage objects
-let config = require("./config.json");
-let members = require("./members.json");
+let config = []
+let members = []
+
+//Read config and memberts
+try {
+    config = require("./config.json");
+} catch (e) {
+    consoleLog(`Error reading config.json\n${e}`)    
+}
+
+try {
+    members = require("./members.json");
+} catch (e) {
+    consoleLog(`Error reading members.json\n${e}`)    
+}
 
 // Data object declarations
 let jsonStats = {};
@@ -35,11 +54,11 @@ let latestPoolBlockData = [0, 0, 0];
 let latestBlockHeight = 0;
 let latestConfirmed = 0;
 let botAdminRoles = [];
+let botChannels = [];
+let serverChannels = [];
+let latestBlock = [];
+let lastMessage = '';
 
-// Define start up timestamp (mainly for logging)
-// We can then store all logging output to a timestamped log file which is helpful in case the script must be restarted
-let startup = new Date();
-let logFile = './logs/' + startup.toISOString().replace(/T|Z|-|:/gi, '').substr(0, 14) + '.log';
 
 // Announce start up
 consoleLog(`Garlicoin Discord Bot version ${BOT_VERSION} starting up...`);
@@ -54,6 +73,10 @@ discordClient.on("ready", () => {
     // Populate the botAdminRoles array
     consoleLog(`Setting admin roles to ${config.bot_admin_roles}`);
     botAdminRoles = config.bot_admin_roles.split(",");
+
+    //Define channels
+    consoleLog(`Setting channels to ${config.channels}`);
+    botChannels = config.channels.split(",");
 
     // Poll the pool's API for the stats JSON data, then update the poolBlockData array
     consoleLog(`Getting initial pool API data`);
@@ -72,6 +95,8 @@ discordClient.on("ready", () => {
     discordClient.user.setActivity(`Garlicoin | ${config.prefix}help`, {
         type: 'WATCHING'
     }).catch(O_o => {});
+
+    serverChannels = discordClient.channels
 
     consoleLog(`Listening for commands with prefix ${config.prefix}`);
 
@@ -354,28 +379,34 @@ discordClient.on("message", message => {
         // Display a general list of pool statistics
         let msg = '';
         msg += '```ml\n';
+        msg += 'Info\n'
+        msg += `  Name               : The Garlicoin Federation Pool\n`;
+        msg += `  Website            : https://blinkhash.com/mining/c19a9909-8be9-4cf9-bef4-408ca8165594/dashboard\n`;
+        msg += `  Domain             : garlico.in\n`;
+        msg += `  Coin               : ${jsonStats.body.primary.config.coin}\n`;    
+        msg += `  Symbol             : ${jsonStats.body.primary.config.symbol}\n`;  
+        msg += `  Algorithm          : ${jsonStats.body.primary.config.algorithm}\n`; 
+        msg += `  Payment Interval   : ${jsonStats.body.primary.config.paymentInterval}s\n`;
+        msg += `  Minimum Payout     : ${jsonStats.body.primary.config.minPayment} GRLC\n`;
+        msg += `  Recipient Fee      : ${jsonStats.body.primary.config.recipientFee}%\n`;
         msg += 'Blocks\n'
-        msg += `  Confirmed   : ${latestPoolBlockData[0]+489}\n`;
-        msg += `  Pending     : ${latestPoolBlockData[1]}\n`;
-        msg += `  Kicked      : ${latestPoolBlockData[2]}\n`;
+        msg += `  Confirmed          : ${latestPoolBlockData[0]+489}\n`;
+        msg += `  Pending            : ${latestPoolBlockData[1]}\n`;
+        msg += `  Kicked             : ${latestPoolBlockData[2]}\n`;
         msg += 'Workers\n';
-        msg += `  Count       : ${jsonMiners.body.primary.shared.length}\n`;
-        msg += `  Hashrate    : ${getHashInt( jsonStats.body.primary.hashrate.shared)}\n`;
+        msg += `  Count              : ${jsonMiners.body.primary.shared.length}\n`;
+        msg += `  Pooled Hashrate    : ${getHashInt( jsonStats.body.primary.hashrate.shared)}\n`;
+        msg += `  Solo Hashrate      : ${getHashInt( jsonStats.body.primary.hashrate.solo)}\n`;
         msg += 'Shares\n';
-        msg += `  Valid       : ${jsonStats.body.primary.shares.valid}\n`;
-        msg += `  Stale       : ${jsonStats.body.primary.shares.stale}\n`;
-        msg += `  Invalid     : ${jsonStats.body.primary.shares.invalid}\n`;
+        msg += `  Valid              : ${jsonStats.body.primary.shares.valid}\n`;
+        msg += `  Stale              : ${jsonStats.body.primary.shares.stale}\n`;
+        msg += `  Invalid            : ${jsonStats.body.primary.shares.invalid}\n`;
         msg += 'Payments\n';
-<<<<<<< Updated upstream
-        msg += `  Total Paid  : ${precisionRound(jsonStats.body.primary.payments.total, 6)} GRLC\n`;
-        msg += `  Next Payout : ${jsonStats.body.primary.payments.next} UTC\n`;
-        msg += `  Last Payout : ${jsonStats.body.primary.payments.last} UTC\n`;
-=======
         msg += `  Total Paid         : ${precisionRound(jsonStats.body.primary.payments.total, 6)} GRLC\n`;
         msg += `  Next Payout        : ${new Date(jsonStats.body.primary.payments.next).toISOString()}\n`;
         msg += `  Last Payout        : ${new Date(jsonStats.body.primary.payments.last).toISOString()}\n`;
         msg += 'Servers\n';
-        msg += `  Fastest (Beta)     : stratum+tcp://accelerator.pool.garlico.in:3002 (3002 only)\n`;
+        msg += `  Fastest (Beta)     : stratum+tcp://accelerator.pool.garlico.in:3002\n`;
         msg += `  Best Available     : stratum+tcp://pool.garlico.in:3002\n`;
         msg += `  API                : http://pool.garlico.in:3001\n`;
         msg += 'Regional Servers\n';
@@ -387,7 +418,6 @@ discordClient.on("message", message => {
         msg += `  3002               : TCP Pooled Vardiff (I:4, Mi:1, Mx:25) \n`;
         msg += `  3003               : TLS Pooled Vardiff (I:4, Mi:1, Mx:25)\n`;
         msg += `  3069               : TCP Solo Vardiff (I:25, Mi:1, Mx:512)\n`;
->>>>>>> Stashed changes
         msg += '```';
         sendReply(message, msg);
     } else if (command === "register") {
@@ -562,6 +592,7 @@ function getCoinData(coin) {
             res.on('end', () => {
                 resolve(JSON.parse(data));
             }).on('error', (e) => {
+                consoleLog(`Error in getCoinData\n${e}`);
                 reject(e);
             });
         });
@@ -583,12 +614,14 @@ function getJsonStats() {
                 try {
                     let json = JSON.parse(data);
                     jsonStats = json;
+                    consoleLog(`Successful: getJsonStats collection`);
                     resolve(jsonStats);
                 } catch (e) {
+                    consoleLog(`Error in getJsonStats: ${e}`);
                     resolve(jsonStats);
                 }
             }).on('error', (e) => {
-                consoleLog(`Error in getJsonStats\n${e}`);
+                consoleLog(`Error in getJsonStats: ${e}`);
                 resolve(jsonStats);
             });
         });
@@ -610,12 +643,14 @@ function getJsonBlocks() {
                 try {
                     let json = JSON.parse(data);
                     jsonBlocks = json;
+                    consoleLog(`Successful: getJsonBlocks collection`);
                     resolve(jsonBlocks);
                 } catch (e) {
+                    consoleLog(`Error in getJsonBlocks: ${e}`);
                     resolve(jsonBlocks);
                 }
             }).on('error', (e) => {
-                consoleLog(`Error in getJsonBlocks\n${e}`);
+                consoleLog(`Error in getJsonBlocks: ${e}`);
                 resolve(jsonBlocks);
             });
         });
@@ -637,12 +672,14 @@ function getJsonWorkers() {
                 try {
                     let json = JSON.parse(data);
                     jsonWorkers = json;
+                    consoleLog(`Successful: getJsonWorkers collection`);
                     resolve(jsonWorkers);
                 } catch (e) {
+                    consoleLog(`Error in getJsonWorkers: ${e}`);
                     resolve(jsonWorkers);
                 }
             }).on('error', (e) => {
-                consoleLog(`Error in getJsonWorkers\n${e}`);
+                consoleLog(`Error in getJsonWorkers: ${e}`);
                 resolve(jsonWorkers);
             });
         });
@@ -664,12 +701,14 @@ function getJsonMiners() {
                 try {
                     let json = JSON.parse(data);
                     jsonMiners = json;
+                    consoleLog(`Successful: getJsonMiners collection`);
                     resolve(jsonMiners);
                 } catch (e) {
+                    consoleLog(`Error in getJsonMiners: ${e}`);
                     resolve(jsonMiners);
                 }
             }).on('error', (e) => {
-                consoleLog(`Error in getJsonMiners\n${e}`);
+                consoleLog(`Error in getJsonMiners: ${e}`);
                 resolve(jsonMiners);
             });
         });
@@ -691,12 +730,14 @@ function getJsonPayments() {
                 try {
                     let json = JSON.parse(data);
                     jsonPayments = json;
+                    consoleLog(`Successful: getJsonPayments collection`);
                     resolve(jsonPayments);
                 } catch (e) {
+                    consoleLog(`Error in getJsonPayments: ${e}`);
                     resolve(jsonPayments);
                 }
             }).on('error', (e) => {
-                consoleLog(`Error in getJsonMiners\n${e}`);
+                consoleLog(`Error in getJsonPaymentss: ${e}`);
                 resolve(jsonPayments);
             });
         });
@@ -790,16 +831,26 @@ function setHashRateActivity() {
 function getPoolBlockData() {
     let blockNode = jsonBlocks.body.primary;
     let msg = '';
+
+    //Check for undefined objects
+    if (typeof latestBlock === 'undefined'){
+        latestBlock = blockNode.pending[0];
+    }
+    if (typeof latestConfirmedBlock === 'undefined'){
+        latestConfirmedBlock = blockNode.confirmed[0];
+    }
+    
     try{
         if (blockNode.pending[0].height > latestBlock.height) {
-            consoleLog(`New block solved: #${blockNode.confirmed.length + blockNode.pending.length} (${blockNode.confirmed.length} confirmed, ${blockNode.pending.length} pending)`);
+            latestBlock = blockNode.pending[0];
+            consoleLog(`New block solved: #${jsonStats.body.primary.blocks.valid+489 + blockNode.pending.length} (${jsonStats.body.primary.blocks.valid+489} confirmed, ${blockNode.pending.length} pending)`);
             msg += '```css\n';
             msg += `We solved a block! (#${blockNode.pending[0].height})\n`;
-            msg += `${latestPoolBlockData[0]+489} confirmed, ${blockNode.pending.length} pending\n`;
+            msg += `${jsonStats.body.primary.blocks.valid+489} confirmed, ${blockNode.pending.length} pending\n`;
             msg += ` Difficulty: ${latestBlock.difficulty}\n`;
             msg += `       Hash: ${latestBlock.hash}\n`;
             msg += `       Luck: ${latestBlock.luck}\n`;
-            msg += `     Reward: ${latestBlock.reward}\n`;
+            msg += `     Reward: ${latestBlock.reward/100000000}\n`;
             msg += `      Round: ${latestBlock.round}\n`;
             msg += `       Solo: ${latestBlock.solo}\n`;
             msg += `Transaction: ${latestBlock.transaction}\n`;
@@ -817,7 +868,7 @@ function getPoolBlockData() {
         msg += '```';
     }
     if (msg.length > 0) {
-        broadcast(msg);
+        broadcastBlock(msg);
 
         msg = '';
         // Add any notifications for members seeking mentions
@@ -840,11 +891,29 @@ function getPoolBlockData() {
 function broadcast(message) {
     if (message.length == 0) return;
 
-    discordClient.channels.forEach(function (chan) {
-        if (chan.type === "text") {
-            chan.send(message).catch(O_o => {}); // Catch to avoid logging channel permission issues
-        }
-    });
+//    for(channel in discordClient.channels)(function (chan) {
+//        if (chan.type === "text") {
+//            chan.send(message).catch(O_o => {}); // Catch to avoid logging channel permission issues
+//        }
+//    });
+}
+
+function broadcastBlock(message) {
+    if (message.length == 0) return;
+
+    try {
+        botChannels.forEach(async function (id){
+            if(lastMessage != message){
+                const channel = await discordClient.channels.fetch(id);
+                channel.send(message);
+            }else{
+                consoleLog(`Duplicate Block Message Suppressed`)
+            }
+            lastMessage = message;
+        });
+    } catch (e) {
+        consoleLog(`Error broadcating blocks to channels: ${e}`)
+    }
 }
 
 // Determine the amount being paid out
@@ -885,9 +954,18 @@ function saveMembers(reason) {
 }
 
 // Activate any timer-based functions
-setInterval(getJsonMiners, 15000);
+setInterval(getJsonPayments, 10000);
+setInterval(getJsonMiners, 10000);
+setInterval(getJsonWorkers, 10000);
+setInterval(getJsonBlocks, 10000);
+setInterval(getJsonStats, 10000);
 setInterval(getPoolBlockData, 10000);
-setInterval(setHashRateActivity, 15000);
+setInterval(setHashRateActivity, 10000);
 
 // Log in to Discord to be present online
-discordClient.login(config.token);
+try{
+    discordClient.login(config.token);
+}
+catch(e){
+    consoleLog(`Error in discord login\n${e}`)
+}
