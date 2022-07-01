@@ -506,8 +506,8 @@ discordClient.on("message", message => {
         let padStart = 1;
         if (workerArray.length >= 10) padStart++;
         if (workerArray.length >= 100) padStart++;
-        msg += '```cpp\n';
-        msg += `${jsonMiners.body.primary.shared.length.toString().padStart(4 + padStart)} Miners -- ${jsonStats.body.primary.hashrate.shared} H/s\n`;
+        msg += '```css\n';
+        msg += `${jsonMiners.body.primary.shared.length.toString().padStart(4 + padStart)} Miners -- ${getHashInt(jsonStats.body.primary.hashrate.shared)}\n`;
         for (let i = 0; i < workerArray.length; i++) {
             let wallet = workerArray[i].worker;
             msg += ` ${(i + 1).toString().padStart(padStart)}  ${wallet.substr(0,6)}...${wallet.substr(-4)}  ${workerArray[i].hashInt.toString().padStart(9)}\n`;
@@ -846,14 +846,14 @@ function getPoolBlockData() {
             consoleLog(`New block solved: #${jsonStats.body.primary.blocks.valid+489 + blockNode.pending.length} (${jsonStats.body.primary.blocks.valid+489} confirmed, ${blockNode.pending.length} pending)`);
             msg += '```css\n';
             msg += `We solved a block! (#${blockNode.pending[0].height})\n`;
-            msg += `${jsonStats.body.primary.blocks.valid+489} confirmed, ${blockNode.pending.length} pending\n`;
-            msg += ` Difficulty: ${latestBlock.difficulty}\n`;
-            msg += `       Hash: ${latestBlock.hash}\n`;
-            msg += `       Luck: ${latestBlock.luck}\n`;
-            msg += `     Reward: ${latestBlock.reward/100000000}\n`;
-            msg += `      Round: ${latestBlock.round}\n`;
+            //msg += `${jsonStats.body.primary.blocks.valid+489} confirmed, ${blockNode.pending.length} pending\n`;
+            //msg += ` Difficulty: ${latestBlock.difficulty}\n`;
+            //msg += `       Hash: ${latestBlock.hash}\n`;
+            //msg += `       Luck: ${latestBlock.luck}\n`;
+            //msg += `     Reward: ${latestBlock.reward/100000000}\n`;
+            //msg += `      Round: ${latestBlock.round}\n`;
             msg += `       Solo: ${latestBlock.solo}\n`;
-            msg += `Transaction: ${latestBlock.transaction}\n`;
+            //msg += `Transaction: ${latestBlock.transaction}\n`;
             msg += `     Worker: ${latestBlock.worker}\n`;
             msg += '```';
         }
@@ -868,16 +868,13 @@ function getPoolBlockData() {
         msg += '```';
     }
     if (msg.length > 0) {
-        broadcastBlock(msg);
 
-        msg = '';
         // Add any notifications for members seeking mentions
         Object.keys(members).forEach(member => {
-            if (members[member].block_notify === "on")
+            if (members[member].block_notify === "on" && latestBlock.worker === members[member].wallet)
                 msg += `<@${member}> `;
         });
-        if (msg.length > 0)
-            broadcast(msg);
+        broadcastBlock(msg);
     }
 
     latestPoolBlockData = [jsonStats.body.primary.blocks.valid, blockNode.pending.length, blockNode.kicked.length];
@@ -909,8 +906,8 @@ function broadcastBlock(message) {
             }else{
                 consoleLog(`Duplicate Block Message Suppressed`)
             }
-            lastMessage = message;
         });
+        lastMessage = message;
     } catch (e) {
         consoleLog(`Error broadcating blocks to channels: ${e}`)
     }
