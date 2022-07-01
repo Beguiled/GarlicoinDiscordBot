@@ -1,10 +1,10 @@
 {
-<<<<<<< Updated upstream
     "token" : "",
     "name" : "Hime, Garlicoin Pool Bot",
     "server_name" : "GRLC Federation Pool",
     "pool_codebase": "nomp",
     "pool_api_url" : "http://pool.garlico.in:3001/api/v1/garlicoin",
     "prefix" : "!",
-    "bot_admin_roles" : "Repo Contributor"
+    "bot_admin_roles" : "Repo Contributor",
+    "channels" : ""
 }
