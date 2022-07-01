@@ -182,7 +182,6 @@ discordClient.on("message", message => {
         //poolstats : Pool statistics\n
         //velocity  : Pool solve velocity\n
         //workers   : List of current pool workers\n
-        //Payments  : Payment info
         //```
         // Market Data
         //```
@@ -250,7 +249,7 @@ discordClient.on("message", message => {
             .then((combinedResult) => {
                 let msg = '';
                 msg += '\`\`\`asciidoc\n';
-                msg += ' Current Cryptocurrency Market Data (via CoinMarketCap)\n';
+                msg += ' Current Cryptocurrency Market Data (via CoinGecko)\n';
                 msg += '----------------------------------------------------------------\n';
                 msg += ' Coin         Value (USD)      1hr    |  24hr    |   7d     |   Mkt Cap\n';
                 for (let i = 0; i < coins.length; i++) {
